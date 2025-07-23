@@ -1,10 +1,12 @@
 import streamlit as st
 import pandas as pd
+import io
+from datetime import datetime
 
 st.set_page_config(page_title="📘 学生指導用データベース", layout="wide")
 st.title("🔍 学生指導用データベース")
 
-# ✅ 決め打ちでCSVファイル読み込み
+# ✅ 決め打ちでCSVファイル読み込み（ローカルの8560sample.csv）
 csv_path = "8560sample.csv"
 
 try:
@@ -57,38 +59,48 @@ st.markdown(f"### 🏷️ 分類: **{record.get('科目分類', 'N/A')}**")
 
 # 💬 コメント欄
 st.text_area("💬 コメントを記録", "")
-import os
-from datetime import datetime
 
-# 📁 ファイル保存処理を定義
-def save_results_txt(filtered_df, keyword):
-    today = datetime.now().strftime("%m%d")
-    filename = f"{keyword}_{today}.txt"
-    with open(filename, "w", encoding="utf-8") as f:
-        for _, row in filtered_df.iterrows():
-            f.write(f"問題文: {row['問題文']}\n")
-            for i in range(1, 6):
-                label = f"選択肢{i}"
-                if label in row and pd.notna(row[label]) and row[label].strip():
-                    f.write(f"{label}: {row[label]}\n")
-            f.write(f"正解: {row.get('正解', '')}\n")
-            f.write(f"分類: {row.get('科目分類', '')}\n")
-            f.write("-" * 40 + "\n")
-    return filename
+# ----------------------------
+# 💾 検索結果のダウンロード処理（Web対応）
+# ----------------------------
 
-def save_results_csv(filtered_df, keyword):
-    today = datetime.now().strftime("%m%d")
-    filename = f"{keyword}_{today}.csv"
-    filtered_df.to_csv(filename, index=False, encoding="utf-8-sig")
-    return filename
+# テキスト形式出力
+def generate_txt(filtered_df):
+    buffer = io.StringIO()
+    for _, row in filtered_df.iterrows():
+        buffer.write(f"問題文: {row['問題文']}\n")
+        for i in range(1, 6):
+            label = f"選択肢{i}"
+            if label in row and pd.notna(row[label]) and row[label].strip():
+                buffer.write(f"{label}: {row[label]}\n")
+        buffer.write(f"正解: {row.get('正解', '')}\n")
+        buffer.write(f"分類: {row.get('科目分類', '')}\n")
+        buffer.write("-" * 40 + "\n")
+    return buffer.getvalue()
 
-# 💾 保存ボタン（検索語がある場合のみ）
+# CSV形式出力
+def generate_csv(filtered_df):
+    csv_buffer = io.StringIO()
+    filtered_df.to_csv(csv_buffer, index=False, encoding="utf-8-sig")
+    return csv_buffer.getvalue()
+
+# ダウンロードボタン表示（検索語があるとき）
 if search:
-    st.markdown("### 💾 検索結果の保存")
-    if st.button("📥 ヒット結果を .txt で保存"):
-        txt_filename = save_results_txt(filtered_df, search)
-        st.success(f"✅ {txt_filename} を保存しました。")
+    st.markdown("### 💾 検索結果のダウンロード")
+    today = datetime.now().strftime("%m%d")
+    txt_data = generate_txt(filtered_df)
+    csv_data = generate_csv(filtered_df)
 
-    if st.button("📥 ヒット結果を .csv で保存"):
-        csv_filename = save_results_csv(filtered_df, search)
-        st.success(f"✅ {csv_filename} を保存しました。")
+    st.download_button(
+        label="📥 ヒット結果を .txt でダウンロード",
+        data=txt_data,
+        file_name=f"{search}_{today}.txt",
+        mime="text/plain"
+    )
+
+    st.download_button(
+        label="📥 ヒット結果を .csv でダウンロード",
+        data=csv_data,
+        file_name=f"{search}_{today}.csv",
+        mime="text/csv"
+    )
