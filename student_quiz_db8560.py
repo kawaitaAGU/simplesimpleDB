@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import os
 from datetime import datetime
+import io
 
 st.set_page_config(page_title="📘 学生指導用データベース", layout="wide")
 st.title("🔍 学生指導用データベース")
@@ -39,15 +39,12 @@ if filtered_df.empty:
 
 # 🔢 表示するレコード番号
 record_idx = st.number_input("表示するレコード番号:", 0, len(filtered_df)-1, 0)
-
-# 📄 該当レコードの取得
 record = filtered_df.iloc[record_idx]
 
 # 📌 表示内容
 st.markdown("---")
-st.markdown(f"### 🧪 問題文")
+st.markdown("### 🧪 問題文")
 st.markdown(f"**{record['問題文']}**")
-
 st.markdown("### ✏️ 選択肢")
 for i in range(1, 6):
     label = f"選択肢{i}"
@@ -60,35 +57,29 @@ st.markdown(f"### 🏷️ 分類: **{record.get('科目分類', 'N/A')}**")
 # 💬 コメント欄
 st.text_area("💬 コメントを記録", "")
 
-# 📁 ファイル保存処理を定義
-def save_results_txt(filtered_df, keyword):
-    now = datetime.now().strftime("%m%d_%H%M%S")
-    filename = f"{keyword}_{now}.txt"
-    with open(filename, "w", encoding="utf-8") as f:
-        for _, row in filtered_df.iterrows():
-            f.write(f"問題文: {row['問題文']}\n")
-            for i in range(1, 6):
-                label = f"選択肢{i}"
-                if label in row and pd.notna(row[label]) and row[label].strip():
-                    f.write(f"{label}: {row[label]}\n")
-            f.write(f"正解: {row.get('正解', '')}\n")
-            f.write(f"分類: {row.get('科目分類', '')}\n")
-            f.write("-" * 40 + "\n")
-    return filename
-
-def save_results_csv(filtered_df, keyword):
-    now = datetime.now().strftime("%m%d_%H%M%S")
-    filename = f"{keyword}_{now}.csv"
-    filtered_df.to_csv(filename, index=False, encoding="utf-8-sig")
-    return filename
-
-# 💾 保存ボタン
+# 📥 ダウンロード処理（Streamlitクラウド対応）
 if search:
-    st.markdown("### 💾 検索結果の保存")
-    if st.button("📥 ヒット結果を .txt で保存"):
-        txt_filename = save_results_txt(filtered_df, search)
-        st.success(f"✅ {txt_filename} を保存しました。")
+    now = datetime.now().strftime("%m%d_%H%M%S")
+    txt_filename = f"{search}_{now}.txt"
+    csv_filename = f"{search}_{now}.csv"
 
-    if st.button("📥 ヒット結果を .csv で保存"):
-        csv_filename = save_results_csv(filtered_df, search)
-        st.success(f"✅ {csv_filename} を保存しました。")
+    # txt作成
+    txt_buffer = io.StringIO()
+    for _, row in filtered_df.iterrows():
+        txt_buffer.write(f"問題文: {row['問題文']}\n")
+        for i in range(1, 6):
+            label = f"選択肢{i}"
+            if label in row and pd.notna(row[label]) and row[label].strip():
+                txt_buffer.write(f"{label}: {row[label]}\n")
+        txt_buffer.write(f"正解: {row.get('正解', '')}\n")
+        txt_buffer.write(f"分類: {row.get('科目分類', '')}\n")
+        txt_buffer.write("-" * 40 + "\n")
+
+    # csv作成
+    csv_buffer = io.StringIO()
+    filtered_df.to_csv(csv_buffer, index=False, encoding="utf-8-sig")
+
+    st.markdown("### 💾 検索結果のダウンロード")
+
+    st.download_button("📥 ヒット結果を .txt でダウンロード", txt_buffer.getvalue(), file_name=txt_filename, mime="text/plain")
+    st.download_button("📥 ヒット結果を .csv でダウンロード", csv_buffer.getvalue(), file_name=csv_filename, mime="text/csv")
