@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+from datetime import datetime
 
 st.set_page_config(page_title="🔍 学生指導用データベース", layout="wide")
 st.title("🔍 学生指導用データベース")
@@ -19,17 +20,22 @@ else:
 
 st.info(f"{len(df_filtered)}件ヒットしました")
 
+# 🔤 タイムスタンプ + 検索語でファイル名作成
+timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+safe_query = query if query else "検索なし"
+file_prefix = f"{safe_query}{timestamp}"
+
 # ✅ CSV ダウンロード
 csv_buffer = io.StringIO()
 df_filtered.to_csv(csv_buffer, index=False)
 st.download_button(
     label="📥 ヒット結果をCSVダウンロード",
     data=csv_buffer.getvalue(),
-    file_name="filtered_results.csv",
+    file_name=f"{file_prefix}.csv",
     mime="text/csv"
 )
 
-# ✅ TEXT ダウンロード（整形）
+# ✅ TEXT ダウンロード
 def format_record_to_text(row):
     parts = [f"問題文: {row['問題文']}"]
     for i in range(1, 6):
@@ -50,17 +56,15 @@ for _, row in df_filtered.iterrows():
 st.download_button(
     label="📄 ヒット結果をTEXTダウンロード",
     data=txt_buffer.getvalue(),
-    file_name="filtered_results.txt",
+    file_name=f"{file_prefix}.txt",
     mime="text/plain"
 )
 
-# 表示対象のレコードインデックス指定
+# ✅ インデックス指定表示
 index = st.number_input("表示するレコード番号:", min_value=0, max_value=len(df_filtered)-1, value=0, step=1)
-
-# 対象レコードの抽出
 record = df_filtered.iloc[index]
 
-# 表示
+# ✅ 表示
 st.markdown("### 🧪 問題文")
 st.write(record["問題文"])
 
@@ -70,10 +74,9 @@ for i in range(1, 6):
         st.write(f"- {record[f'選択肢{i}']}")
 
 st.markdown(f"**✅ 正解:** {record['正解']}")
-
 st.markdown(f"**📚 分類:** {record['科目分類']}")
 
-# 🔗 画像リンク表示（正解の下）
+# 🔗 画像リンク（正解の下に）
 st.markdown("### 🖼️ 画像リンク")
 if pd.notna(record.get("リンクURL", None)) and str(record["リンクURL"]).strip() != "":
     st.markdown(f"[画像を表示]({record['リンクURL']})")
