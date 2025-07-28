@@ -7,7 +7,7 @@ st.set_page_config(page_title="📘 学生指導用データベース", layout="
 st.title("🔍 学生指導用データベース")
 
 # ✅ 決め打ちでCSVファイル読み込み
-csv_path = "7559sample.csv"
+csv_path = "image7559.csv"
 
 try:
     df = pd.read_csv(csv_path)
