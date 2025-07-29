@@ -12,9 +12,17 @@ df = pd.read_csv("image7559.csv")
 # 検索バー
 query = st.text_input("問題文・選択肢・分類で検索:")
 
-# 検索処理
+# 🔍 検索ヒントの表示
+st.caption("💡 検索語を `&` でつなげるとAND検索ができます（例: レジン & 硬さ）")
+
+# 🔍 AND検索対応
 if query:
-    df_filtered = df[df.apply(lambda row: row.astype(str).str.contains(query, case=False).any(), axis=1)]
+    keywords = [kw.strip() for kw in query.split("&") if kw.strip()]
+    df_filtered = df[df.apply(
+        lambda row: all(
+            kw.lower() in row.astype(str).str.lower().str.cat(sep=" ")
+            for kw in keywords
+        ), axis=1)]
 else:
     df_filtered = df
 
@@ -64,13 +72,14 @@ st.download_button(
 index = st.number_input("表示するレコード番号:", min_value=0, max_value=len(df_filtered)-1, value=0, step=1)
 record = df_filtered.iloc[index]
 
-# ✅ 表示
 # 🔗 画像リンク（問題文の上に）
 st.markdown("### 🖼️ 画像リンク")
 if pd.notna(record.get("リンクURL", None)) and str(record["リンクURL"]).strip() != "":
     st.markdown(f"[画像を表示]({record['リンクURL']})")
 else:
     st.write("（画像リンクはありません）")
+
+# ✅ 表示
 st.markdown("### 🧪 問題文")
 st.write(record["問題文"])
 
@@ -81,4 +90,3 @@ for i in range(1, 6):
 
 st.markdown(f"**✅ 正解:** {record['正解']}")
 st.markdown(f"**📚 分類:** {record['科目分類']}")
-
