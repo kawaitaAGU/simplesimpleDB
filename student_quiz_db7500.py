@@ -65,6 +65,12 @@ index = st.number_input("表示するレコード番号:", min_value=0, max_valu
 record = df_filtered.iloc[index]
 
 # ✅ 表示
+# 🔗 画像リンク（問題文の上に）
+st.markdown("### 🖼️ 画像リンク")
+if pd.notna(record.get("リンクURL", None)) and str(record["リンクURL"]).strip() != "":
+    st.markdown(f"[画像を表示]({record['リンクURL']})")
+else:
+    st.write("（画像リンクはありません）")
 st.markdown("### 🧪 問題文")
 st.write(record["問題文"])
 
@@ -76,9 +82,3 @@ for i in range(1, 6):
 st.markdown(f"**✅ 正解:** {record['正解']}")
 st.markdown(f"**📚 分類:** {record['科目分類']}")
 
-# 🔗 画像リンク（正解の下に）
-st.markdown("### 🖼️ 画像リンク")
-if pd.notna(record.get("リンクURL", None)) and str(record["リンクURL"]).strip() != "":
-    st.markdown(f"[画像を表示]({record['リンクURL']})")
-else:
-    st.write("（画像リンクはありません）")
